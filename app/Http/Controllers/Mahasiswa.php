@@ -172,7 +172,7 @@ class Mahasiswa extends Controller
 
 // dd($mahasiswa);
 
-        return view('admin.mahasiswa.create', compact(
+        return view('admin.mahasiswa.edit', compact(
             'isEdit',
             'mahasiswa',
             'list_agama',
