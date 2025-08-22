@@ -15,7 +15,7 @@ class MataKuliahController extends Controller
      */
     public function index()
     {
-        $mata_kulias = MataKuliah::latest()->get();
+        $mata_kulias = MataKuliah::latest()->paginate(5);
         return new MahasiswaResource(true, "Berhasil menampilkan data!", $mata_kulias);
     }
 
@@ -124,7 +124,7 @@ class MataKuliahController extends Controller
     public function destroy(string $id_matkul)
     {
         $mata_kuliah = MataKuliah::find($id_matkul);
-        
+
         $mata_kuliah->delete();
 
         return new MahasiswaResource(true, "Berhasil menghapus data mata kuliah!", null);
