@@ -29,6 +29,7 @@ class MataKuliah extends Model
     ];
 
     protected $casts = [
+        'sks_matkul' => 'integer',
         'tanggal_mulai_efektif' => 'date',
         'tanggal_selesai_efektif' => 'date',
     ];

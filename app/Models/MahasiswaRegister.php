@@ -16,14 +16,14 @@ class MahasiswaRegister extends Model
         'nim',
         'id_jenis_daftar',
         'id_jalur_daftar',
-        'id_perguruan_tingi',
+        'id_perguruan_tinggi',
         'id_prodi',
         'id_periode_masuk',
         'id_prodi_asal',
         'id_perguruan_tinggi_asal',
         'id_pembiayaan',
         'tanggal_daftar',
-        'sks_diakui,'
+        'sks_diakui',
     ];
 
     protected $casts = [

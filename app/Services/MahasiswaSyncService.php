@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Throwable;
 use App\Models\Mahasiswa;
+use App\Models\MahasiswaRegister;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
@@ -21,13 +22,10 @@ class MahasiswaSyncService
      */
     public function syncActiveLecturers(): int
     {
-        // 1) ambil token valid
         $token = $this->tokenService->getValidToken();
 
-        // 2) coba fetch data
         [$ok, $items] = $this->tryFetch($token);
 
-        // 3) kalau gagal karena token, refresh lalu retry sekali
         if (!$ok) {
             $token = $this->tokenService->refreshToken();
             [$ok, $items] = $this->tryFetch($token);
@@ -110,6 +108,121 @@ class MahasiswaSyncService
             throw $e;
         }
     }
+
+    public function insertBiodataMahasiswa(Mahasiswa $mahasiswa)
+    {
+        try {
+
+            $token = $this->tokenService->getValidToken();
+
+            $name   = $mahasiswa->nama_mahasiswa;
+            $local  = Str::lower(preg_replace('/\s+/', '', $name)) . rand(100, 999);
+            $email = $local . '@polsa.ac.id';
+
+            $payload = [
+                'act'   => 'InsertBiodataMahasiswa',
+                'token' => $token,
+                'record' => [
+                    'nama_mahasiswa'                => $mahasiswa->nama_mahasiswa,
+                    'jenis_kelamin'                 => $mahasiswa->jenis_kelamin,
+                    'tempat_lahir'                  => $mahasiswa->tempat_lahir,
+                    'tanggal_lahir'                 => $mahasiswa->tanggal_lahir,
+                    'id_agama'                      => $mahasiswa->id_agama,
+                    'nik'                           => $mahasiswa->nik,
+                    'nisn'                          => $mahasiswa->nisn ?? '0000000000',
+                    'handphone'                     => $mahasiswa->handphone ?? '000000000000',
+                    'email'                         => $mahasiswa->email ?? $email,
+                    'kewarganegaraan'               => 'ID',
+                    'kelurahan'                     => $mahasiswa->kelurahan,
+                    'id_wilayah'                    => $mahasiswa->id_wilayah,
+                    'penerima_kps'                  => $mahasiswa->penerima_kps,
+                    'nama_ibu_kandung'              => $mahasiswa->nama_ibu_kandung,
+                    'id_kebutuhan_khusus_mahasiswa' => $mahasiswa->id_kebutuhan_khusus_mahasiswa,
+                    'id_kebutuhan_khusus_ayah'      => $mahasiswa->id_kebutuhan_khusus_ayah,
+                    'id_kebutuhan_khusus_ibu'       => $mahasiswa->id_kebutuhan_khusus_ibu,
+                ]
+            ];
+
+            $url = Config::get('services.live2.base_url');
+
+            $res = Http::timeout(30)
+                ->acceptJson()
+                ->asJson()
+                ->post($url, $payload)
+                ->throw();
+
+            $json = $res->json();
+
+            $errorCode = data_get($json, 'error_code', 0);
+            if ($errorCode !== 0) {
+                $errorDesc = data_get($json, 'error_desc', 'Unknown error from remote API');
+                throw new \RuntimeException("Remote API error [$errorCode]: $errorDesc");
+            }
+
+            $items = data_get($json, 'data', []);
+            if (!is_array($items)) {
+                throw new \RuntimeException('Format respons API tidak sesuai (field data bukan array).');
+            }
+
+            return [true, $items];
+        } catch (Throwable $e) {
+            report($e);
+            return [false, ['message' => $e->getMessage()]];
+        }
+    }
+
+    public function insertRiwayatPendidikan(MahasiswaRegister $mahasiswa)
+    {
+        try {
+            
+            $token = $this->tokenService->getValidToken();
+            
+            $payload = [
+                'act'   => 'InsertRiwayatPendidikanMahasiswa',
+                'token' => $token,
+                'record' => [
+                    'id_mahasiswa'             => $mahasiswa->id_mahasiswa,
+                    'nim'                      => $mahasiswa->nim,
+                    'id_jenis_daftar'          => $mahasiswa->id_jenis_daftar ?? '1',
+                    'id_jalur_daftar'          => $mahasiswa->id_jalur_daftar ?? '12',
+                    'tanggal_daftar'           => $mahasiswa->tanggal_daftar,
+                    'id_perguruan_tinggi'      => '77609f0b-0f05-4796-827f-ed8b134eb5ac',
+                    'id_prodi'                 => $mahasiswa->id_prodi,
+                    'id_periode_masuk'         => '20242',
+                    'id_pembiayaan'         => '1',
+                    'biaya_masuk'         => '200000',
+                ]
+            ];
+
+            $url = Config::get('services.live2.base_url');
+
+            $res = Http::timeout(30)
+                ->acceptJson()
+                ->asJson()
+                ->post($url, $payload)
+                ->throw();
+
+            $json = $res->json();
+
+            $errorCode = data_get($json, 'error_code', 0);
+            if ($errorCode !== 0) {
+                $errorDesc = data_get($json, 'error_desc', 'Unknown error from remote API');
+                throw new \RuntimeException("Remote API error [$errorCode]: $errorDesc");
+            }
+
+            $items = data_get($json, 'data', []);
+            if (!is_array($items)) {
+                throw new \RuntimeException('Format respons API tidak sesuai (field data bukan array).');
+            }
+
+            return [true, $items];
+        } catch (Throwable $e) {
+            report($e);
+            return [false, ['message' => $e->getMessage()]];
+        }
+    }
+
+
 
     /**
      * Pemetaan field dari API ke kolom tabel kita.
